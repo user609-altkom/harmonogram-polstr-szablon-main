@@ -39,10 +39,14 @@ function parsujNadplaty(wartosc: string | null): Nadplata[] | string {
     if (!Number.isFinite(kwota) || kwota <= 0) {
       return 'nadplaty.kwota: dodatnia kwota w złotych';
     }
-    if (rekord.tryb !== 'obnizRate' && rekord.tryb !== 'skrocOkres') {
+    if (rekord.tryb !== undefined && rekord.tryb !== 'obnizRate' && rekord.tryb !== 'skrocOkres') {
       return 'nadplaty.tryb: obnizRate albo skrocOkres';
     }
-    nadplaty.push({ miesiac, kwotaGr: Math.round(kwota * 100), tryb: rekord.tryb });
+    nadplaty.push({
+      miesiac,
+      kwotaGr: Math.round(kwota * 100),
+      tryb: rekord.tryb === undefined ? 'skrocOkres' : rekord.tryb,
+    });
   }
   return nadplaty;
 }

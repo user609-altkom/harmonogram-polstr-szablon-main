@@ -39,7 +39,7 @@ describe('domena: rata malejąca', () => {
     }
     expect(pierwsza.czescKapitalowa).toBe(druga.czescKapitalowa);
     expect(pierwsza.czescOdsetkowa).toBeGreaterThan(ostatnia.czescOdsetkowa);
-    expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa, 0)).toBe(120_000_00);
+    expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa + rata.nadplata, 0)).toBe(120_000_00);
   });
 });
 
@@ -94,7 +94,7 @@ describe('domena: nadpłata w trybie obniż raty i skrócenia okresu', () => {
     });
 
     expect(wynik.raty.length).toBeLessThan(6);
-    expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa, 0)).toBe(30_000_00);
+    expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa + rata.nadplata, 0)).toBe(30_000_00);
   });
 });
 
@@ -111,5 +111,58 @@ describe('domena: sumy kapitałowe po zaokrągleniach', () => {
     });
 
     expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa, 0)).toBe(45_000_00);
+  });
+});
+
+describe('domena CR-A: skutek nadpłaty', () => {
+  const parametryBazowe = {
+    kwotaGr: 300_000_00,
+    liczbaRat: 240,
+    marza: 0.0211,
+    typRat: 'rowne' as const,
+    wskaznik: 'WIBOR_3M' as const,
+    pierwszaRata: '2026-10-01',
+    stopy: Array(240).fill(0.0455),
+  };
+
+  it('obniza rate bez zmiany liczby rat', () => {
+    const wynik = policzHarmonogram({
+      ...parametryBazowe,
+      nadplaty: [{ miesiac: 1, kwotaGr: 30_000_00, tryb: 'obnizRate' }],
+    });
+
+    expect(wynik.raty).toHaveLength(240);
+    expect(wynik.raty[0]?.rata).toBe(226_507);
+    expect(wynik.raty[0]?.nadplata).toBe(30_000_00);
+    expect(wynik.raty[0]?.saldoPoSplacie).toBe(26_939_993);
+    expect(wynik.raty[1]?.rata).toBe(203_811);
+    expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa + rata.nadplata, 0)).toBe(300_000_00);
+  });
+
+  it('skracza okres przy niezmienionej racie', () => {
+    const wynik = policzHarmonogram({
+      ...parametryBazowe,
+      nadplaty: [{ miesiac: 1, kwotaGr: 30_000_00, tryb: 'skrocOkres' }],
+    });
+
+    expect(wynik.raty).toHaveLength(196);
+    expect(wynik.raty[0]?.rata).toBe(226_507);
+    expect(wynik.raty[1]?.rata).toBe(226_507);
+    expect(wynik.rataOstatnia).toBe(220_053);
+    expect(wynik.raty.reduce((suma, rata) => suma + rata.czescKapitalowa + rata.nadplata, 0)).toBe(300_000_00);
+  });
+
+  it('traktuje brak trybu jako skrocenie okresu na poziomie domeny', () => {
+    const wynikJawny = policzHarmonogram({
+      ...parametryBazowe,
+      nadplaty: [{ miesiac: 1, kwotaGr: 30_000_00, tryb: 'skrocOkres' }],
+    });
+    const wynikDomyslny = policzHarmonogram({
+      ...parametryBazowe,
+      nadplaty: [{ miesiac: 1, kwotaGr: 30_000_00 }],
+    });
+
+    expect(wynikDomyslny.raty.length).toBe(wynikJawny.raty.length);
+    expect(wynikDomyslny.rataOstatnia).toBe(wynikJawny.rataOstatnia);
   });
 });
