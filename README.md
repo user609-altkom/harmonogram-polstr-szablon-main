@@ -105,6 +105,10 @@ git push -u origin main
 | `npm run typecheck` | `tsc --noEmit`, sprawdzenie typów bez kompilacji |
 | `npm run lint` | ESLint z konfiguracją Next.js |
 
+## Nadpłaty CR-A
+
+Nadpłata jest księgowana po racie danego miesiąca. Odsetki są naliczane od salda sprzed nadpłaty, a nadpłata nie jest częścią regularnego pola raty. Każda nadpłata może mieć tryb `obnizRate` albo `skrocOkres`; brak pola `tryb` oznacza `skrocOkres`.
+
 ## Dane
 
 Katalog `dane/` zawiera dwie serie wskaźników w formacie JSON: `polstr-1m.json` (miesięcznie, od lipca 2025) i `wibor-3m.json` (kwartalnie, od 2020). Każdy plik ma pola `wskaznik`, `opis`, `uwaga`, `zrodla` i `wartosci` z listą wpisów `{ "od": "YYYY-MM-DD", "stopa": 0.0355 }`. Stopa jest ułamkiem, nie procentem. Wpis obowiązuje od dnia `od` do dnia przed kolejnym wpisem, a po ostatnim wpisie serii obowiązuje ostatnia znana wartość. Wartości są ilustracyjne i przybliżone, szczegóły w polu `uwaga`. Nie edytuj tych plików w trakcie ćwiczenia, testy je wczytują. W kodzie serie są dostępne przez `seriaWskaznika()` z `src/dane/wskazniki.ts`.
