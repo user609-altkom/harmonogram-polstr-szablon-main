@@ -4,7 +4,7 @@ export type TrybNadplaty = 'obnizRate' | 'skrocOkres';
 export interface Nadplata {
   miesiac: number;
   kwotaGr: number;
-  tryb: TrybNadplaty;
+  tryb?: TrybNadplaty;
 }
 
 export interface ParametryKredytu {
@@ -29,6 +29,7 @@ export interface RataHarmonogramu {
   czescKapitalowa: number;
   czescOdsetkowa: number;
   rata: number;
+  nadplata: number;
   saldoPoSplacie: number;
 }
 
@@ -90,14 +91,14 @@ export function policzHarmonogram(parametry: ParametryKredytu): Harmonogram {
       }
       rataOkresu = rataRowna;
       czescKapitalowa = Math.min(saldo, Math.max(0, rataOkresu - czescOdsetkowa));
-      if (pozostaloWTymMiesiacu === 1 || numerOkresu === parametry.liczbaRat) {
+      if (pozostaloWTymMiesiacu === 1 || rataOkresu >= saldo + czescOdsetkowa) {
         czescKapitalowa = saldo;
         rataOkresu = czescKapitalowa + czescOdsetkowa;
       }
     } else {
       czescKapitalowa = Math.min(saldo, Math.max(0, Math.round(saldo / pozostaloWTymMiesiacu)));
       rataOkresu = czescKapitalowa + czescOdsetkowa;
-      if (pozostaloWTymMiesiacu === 1 || numerOkresu === parametry.liczbaRat) {
+      if (pozostaloWTymMiesiacu === 1 || czescKapitalowa >= saldo) {
         czescKapitalowa = saldo;
         rataOkresu = czescKapitalowa + czescOdsetkowa;
       }
@@ -112,6 +113,7 @@ export function policzHarmonogram(parametry: ParametryKredytu): Harmonogram {
       czescKapitalowa: zaokraglijDoGrosza(czescKapitalowa),
       czescOdsetkowa: zaokraglijDoGrosza(czescOdsetkowa),
       rata: zaokraglijDoGrosza(rataOkresu),
+      nadplata: 0,
       saldoPoSplacie,
     };
 
@@ -124,18 +126,13 @@ export function policzHarmonogram(parametry: ParametryKredytu): Harmonogram {
     if (nadplata) {
       const kwotaNadplaty = Math.min(saldo, nadplata.kwotaGr);
       saldo -= kwotaNadplaty;
-      if (kwotaNadplaty > 0) {
-        const ostatnia = raty[raty.length - 1];
-        if (ostatnia) {
-          ostatnia.czescKapitalowa += kwotaNadplaty;
-          ostatnia.rata += kwotaNadplaty;
-          ostatnia.saldoPoSplacie = saldo;
-        }
+      const ostatnia = raty[raty.length - 1];
+      if (ostatnia) {
+        ostatnia.nadplata = kwotaNadplaty;
+        ostatnia.saldoPoSplacie = saldo;
       }
-      if (nadplata.tryb === 'obnizRate') {
+      if ((nadplata.tryb ?? 'skrocOkres') === 'obnizRate') {
         rataRowna = undefined;
-      } else {
-        pozostalo = Math.max(1, pozostalo - 1);
       }
     }
   }
@@ -149,7 +146,7 @@ export function policzHarmonogram(parametry: ParametryKredytu): Harmonogram {
     };
   }
 
-  const sumaKapitalu = raty.reduce((suma, rata) => suma + rata.czescKapitalowa, 0);
+  const sumaKapitalu = raty.reduce((suma, rata) => suma + rata.czescKapitalowa + rata.nadplata, 0);
   const roznicaKapitalu = parametry.kwotaGr - sumaKapitalu;
   if (roznicaKapitalu !== 0) {
     const ostatnia = raty[raty.length - 1];
